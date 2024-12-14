@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">{{ playlist.name }}</h1>
+    <p>{{ playlist.description }}</p>
+
+    <h2>Songs in this Playlist</h2>
+    <ul>
+        {% for song in playlist.songs %}
+        <li>
+            <a href="/songs/{{ song.id }}">{{ song.title }}</a> by {{ song.artist }}
+        </li>
+        {% else %}
+        <p>No songs in this playlist yet.</p>
+        {% endfor %}
+    </ul>
+
+    <a class="btn btn-primary" href="/playlists/{{ playlist.id }}/add-song">Add Song to Playlist</a>
+    <a class="btn btn-secondary" href="/playlists">Back to Playlists</a>
+</div>
+<form method="POST" action="{{ url_for('main.delete_playlist', playlist_id=playlist.id) }}" class="d-inline">
+    {{ csrf_token() }} <!-- Include CSRF token here -->
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+</form>
+
+
+{% endblock %}

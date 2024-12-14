@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="jumbotron">
+  <h1 class="display-4">{{ song.title }}</h1>
+  <p class="lead">By {{ song.artist }}</p>
+  <hr class="my-4">
+</div>
+
+<div class="container">
+  <h3>Playlists Featuring This Song</h3>
+  {% if song.playlists %}
+    <ul>
+      {% for playlist in song.playlists %}
+        <li>{{ playlist.name }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>This song is not part of any playlists yet.</p>
+  {% endif %}
+
+  <div class="mt-4">
+    <!-- Add to Playlist Form -->
+    <h4>Add to Playlist</h4>
+    <form method="POST" action="{{ url_for('main.add_song_to_playlist') }}">
+      {{ csrf_token() }}
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <select name="playlist_id" class="form-select w-auto">
+        {% for playlist in playlists %}
+          <option value="{{ playlist.id }}">{{ playlist.name }}</option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="song_id" value="{{ song.id }}">
+      <button type="submit" class="btn btn-primary btn-sm">Add</button>
+    </form>
+  </div>
+
+  <div class="mt-4">
+    <!-- Delete Song -->
+    <h4>Delete This Song</h4>
+    <form method="POST" action="{{ url_for('main.delete_song', song_id=song.id) }}">
+      {{ csrf_token() }}
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-danger btn-sm">Delete Song</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

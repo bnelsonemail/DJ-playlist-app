@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Songs</h1>
+
+    {% if songs %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Artist</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for song in songs %}
+                    <tr>
+                        <td>{{ song.title }}</td>
+                        <td>{{ song.artist }}</td>
+                        <td>
+                            <!-- Delete Song Form -->
+                            <form method="POST" action="{{ url_for('main.delete_song', song_id=song.id) }}" class="d-inline">
+                                {{ form.hidden_tag() }} <!-- Use this for Flask-WTF forms -->
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                            <!-- Add Song to Playlist Form -->
+                            <form method="POST" action="{{ url_for('main.add_song_to_playlist_from_songs') }}" class="d-inline">
+                                {{ form.hidden_tag() }} <!-- Use this for Flask-WTF forms -->
+                                <select name="playlist_id" class="form-select form-select-sm d-inline w-auto">
+                                    {% for playlist in playlists %}
+                                        <option value="{{ playlist.id }}">{{ playlist.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <input type="hidden" name="song_id" value="{{ song.id }}">
+                                <button type="submit" class="btn btn-primary btn-sm">Add to Playlist</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No songs found. Add some to get started!</p>
+    {% endif %}
+</div>
+<a href="{{ url_for('main.add_song') }}" class="btn btn-success mt-3">Add a Song</a>
+{% endblock %}
+
+

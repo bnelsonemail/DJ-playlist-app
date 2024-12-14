@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container text-center">
+  <h1 class="mb-4">See All the Playlists!</h1>
+
+  {% for playlist in playlists %}
+    <div class="card mb-4">
+      <div class="card-header">
+        <h3 class="mb-0">{{ playlist.name }}</h3>
+      </div>
+      <div class="card-body">
+        {% if playlist.songs %}
+          <table class="table table-striped text-left">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Artist</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for song in playlist.songs %}
+                <tr>
+                  <td>{{ song.title }}</td>
+                  <td>{{ song.artist }}</td>
+                  <td class="text-center">
+                    <form method="POST" action="{{ url_for('main.delete_song', song_id=song.id) }}" style="display:inline;">
+                      {{ form.hidden_tag() }}
+                      <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="text-muted">No songs in this playlist yet.</p>
+        {% endif %}
+        
+        <!-- Add Edit Playlist Button with Access Control -->
+        {% if playlist.user_id == current_user.id %}
+          <a href="{{ url_for('main.edit_playlist', playlist_id=playlist.id) }}" class="btn btn-warning btn-sm mt-3">
+            Edit Playlist
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+
+  <a class="btn btn-primary" href="/playlists/add">Add a Playlist</a>
+</div>
+{% endblock %}
+
