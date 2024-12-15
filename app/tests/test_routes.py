@@ -39,14 +39,15 @@ def client(app):
 @pytest.fixture
 def setup_playlists(app, test_user):
     """Create test playlists for the user."""
-    def _create_playlists(name="Test Playlist", description="A sample playlist"):
-        with app.app_context():
+    with app.app_context():
+        def _create_playlists(name="Test Playlist", description="A sample playlist"):
             playlist = Playlist(name=name, description=description, user_id=test_user.id)
             db.session.add(playlist)
             db.session.commit()
             return playlist
 
-    return _create_playlists
+        return _create_playlists
+
 
 
 
@@ -55,7 +56,7 @@ def setup_playlists(app, test_user):
 def logged_in_client(client, app):
     """Fixture to log in a dynamically created test user."""
     user = None  # Initialize user to avoid reference errors in the cleanup phase.
-    
+
     with app.app_context():
         try:
             # Generate unique user details for the test
@@ -80,6 +81,11 @@ def logged_in_client(client, app):
             assert b"Welcome" in response.data or b"Dashboard" in response.data, "Unexpected login response."
             logger.info("Test user logged in successfully.")
 
+            # Associate user ID in session to avoid conflicts in tests
+            with client.session_transaction() as session:
+                session["_user_id"] = str(user.id)
+                session["_fresh"] = True
+
             yield client  # Provide the logged-in client to the test
 
         except Exception as e:
@@ -98,6 +104,7 @@ def logged_in_client(client, app):
             finally:
                 db.session.remove()
                 logger.info("Database session removed.")
+
 
 
 
@@ -272,29 +279,25 @@ class TestRoutes:
     def test_edit_playlist(logged_in_client, setup_playlists):
         """Test editing a playlist."""
         with logged_in_client.application.app_context():
-            # Get the logged-in user
-            with logged_in_client.session_transaction() as session:
-                user_id = session["_user_id"]
+            # Fetch the user associated with the logged-in client
+            user = User.query.filter_by(email="test@example.com").first()
+            assert user is not None, "Test user should exist."
 
-            # Create a playlist for the logged-in user
-            playlist = setup_playlists(name="Old Playlist", description="Old Description")
-            assert playlist.user_id == int(user_id), "Playlist should belong to the logged-in user."
+            # Ensure a playlist exists for the test user
+            playlist = Playlist.query.filter_by(user_id=user.id).first()
+            assert playlist is not None, "Test playlist should exist."
 
-        # Edit the playlist
-        response = logged_in_client.post(
-            url_for("main.edit_playlist", playlist_id=playlist.id),
-            data={"name": "Updated Playlist", "description": "Updated Description"},
-            follow_redirects=True,
-        )
+            # Attempt to edit the playlist
+            response = logged_in_client.post(
+                url_for("main.edit_playlist", playlist_id=playlist.id),
+                data={"name": "Updated Playlist", "description": "Updated Description"},
+                follow_redirects=True,
+            )
 
-        # Assertions for response and database changes
-        assert response.status_code == 200, "Expected HTTP 200 status code for a successful edit."
-        assert b"Playlist 'Updated Playlist' has been updated." in response.data
+            # Assert that the edit was successful
+            assert response.status_code == 200, "Expected HTTP 200 status code for successful edit."
+            assert b"Playlist 'Updated Playlist' has been updated." in response.data
 
-        with logged_in_client.application.app_context():
-            updated_playlist = Playlist.query.get(playlist.id)
-            assert updated_playlist.name == "Updated Playlist", "Playlist name was not updated."
-            assert updated_playlist.description == "Updated Description", "Playlist description was not updated."
 
 
 

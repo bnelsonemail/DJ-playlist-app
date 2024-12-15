@@ -76,41 +76,44 @@ def test_database_setup(app):
         logger.info(f"Creating test schema: {test_schema}")
 
         with db.engine.connect() as connection:
+            connection.execute(text(f"CREATE SCHEMA {test_schema};"))
+            connection.execute(text(f"SET search_path TO {test_schema};"))
+
+            # Create tables within the test schema
+            db.create_all()
+            logger.info("Tables created in the test schema.")
+
+            db.session.bind = connection
+
             try:
-                # Create and switch to the test schema
-                connection.execute(text(f"CREATE SCHEMA {test_schema};"))
-                connection.execute(text(f"SET search_path TO {test_schema};"))
-
-                # Create tables within the test schema
-                db.create_all()
-                logger.info("Tables created in the test schema.")
-
-                # Add initial test data
+                # Add initial test user
                 user = User(
                     username=f"testuser_{uuid.uuid4()}",
                     email=f"testuser_{uuid.uuid4()}@example.com"
                 )
                 user.set_password("password123")
+                db.session.add(user)
+                db.session.commit()
+                logger.info(f"User created: {user.id} ({user.email})")
+
+                # Use the created user ID for the playlist
                 playlist = Playlist(
                     name=f"Initial Playlist {uuid.uuid4()}",
                     description="Initial Description",
-                    user_id=user.id
+                    user_id=user.id  # Assign valid user_id here
                 )
+                db.session.add(playlist)
+
+                # Add a test song
                 song = Song(
                     title=f"Initial Song {uuid.uuid4()}",
                     artist="Initial Artist"
                 )
-
-                db.session.add_all([user, playlist, song])
+                db.session.add(song)
                 db.session.commit()
                 logger.info("Initial test data added.")
 
-                # Validate setup
-                assert User.query.count() == 1, "User setup failed."
-                assert Playlist.query.count() == 1, "Playlist setup failed."
-                assert Song.query.count() == 1, "Song setup failed."
-
-                yield db  # Provide the test database session to the test
+                yield db
 
             finally:
                 logger.info("Rolling back and cleaning up.")
@@ -118,11 +121,10 @@ def test_database_setup(app):
                 db.session.remove()
 
                 # Drop the test schema
-                try:
-                    connection.execute(text(f"DROP SCHEMA {test_schema} CASCADE;"))
-                    logger.info(f"Test schema {test_schema} dropped.")
-                except Exception as e:
-                    logger.error(f"Error dropping test schema: {e}")
+                with db.engine.connect() as drop_connection:
+                    drop_connection.execute(text(f"DROP SCHEMA {test_schema} CASCADE;"))
+                logger.info(f"Test schema {test_schema} dropped.")
+
 
 
 

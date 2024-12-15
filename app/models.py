@@ -15,11 +15,19 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(80), nullable=False, unique=True, index=True)
     email = db.Column(db.String(120), nullable=False, unique=True, index=True)
-    password_hash = db.Column(db.String(256), nullable=False)  # Store hashed password
+    password_hash = db.Column(db.String(256), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Methods to set and check the password
+    # Relationships
+    playlists = db.relationship(
+        'Playlist',
+        back_populates='user',  # Matches the `user` relationship in Playlist
+        lazy='dynamic',  # Efficient loading
+        cascade="all, delete-orphan",  # Cascades deletes
+        passive_deletes=True,  # Delegates deletion handling to the database
+    )
+
     def set_password(self, password):
         if not password:
             raise ValueError("Password cannot be empty.")
@@ -32,6 +40,7 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return f"<User {self.username} (ID: {self.id})>"
+
 
 
 # Playlist model
@@ -58,12 +67,7 @@ class Playlist(db.Model):
     # Relationship with User
     user = db.relationship(
         'User',
-        backref=db.backref(
-            'playlists',
-            lazy='dynamic',  # Dynamic loading for scalability
-            cascade="all, delete-orphan",  # Ensures proper cascading deletes
-            passive_deletes=True,  # Delegates deletion handling to the database
-        ),
+        back_populates='playlists',  # Matches the `playlists` relationship in User
     )
 
     # Relationship with Song through PlaylistSong
@@ -72,7 +76,6 @@ class Playlist(db.Model):
         secondary='playlist_songs',  # Association table
         back_populates='playlists',  # Matches the `playlists` relationship in Song
         lazy='dynamic',  # Efficient loading for large datasets
-        overlaps="playlist_songs",
     )
 
     # Direct relationship with PlaylistSong
@@ -81,11 +84,11 @@ class Playlist(db.Model):
         back_populates='playlist',  # Matches the `playlist` relationship in PlaylistSong
         cascade="all, delete-orphan",  # Cascades deletions
         passive_deletes=True,  # Delegates deletion handling to the database
-        overlaps="songs",
     )
 
     def __repr__(self):
         return f"<Playlist {self.name} (ID: {self.id})>"
+
 
 
 

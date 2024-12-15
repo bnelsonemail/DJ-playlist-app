@@ -62,10 +62,21 @@ class SongForm(FlaskForm):
 
     def validate_title(self, title):
         """Custom validation for unique song title."""
-        if db.session.bind:  # Ensure a database session is bound
-            song = Song.query.filter_by(title=title.data).first()
-            if song:
+        # Ensure a database session is bound
+        if db.session.bind:
+            song_query = Song.query.filter_by(title=title.data)
+            # Ensure the query excludes the current song if editing
+            if hasattr(self, 'song_id') and self.song_id:
+                song_query = song_query.filter(Song.id != self.song_id)
+
+            # Check if a song with the same title exists
+            if song_query.first():
                 raise ValidationError("This song title already exists. Please choose a different title.")
+
+    def set_song_id(self, song_id):
+        """Set the current song ID for edit validation."""
+        self.song_id = song_id
+
 
 
 
